@@ -3,44 +3,30 @@ pipeline {
 
     stages {
 
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Build') {
             steps {
-                echo 'Building Docker application...'
                 sh 'docker build -t aws-ec2-web-app .'
             }
         }
 
-        stage('Test') {
+        stage('Run Container') {
             steps {
-                echo 'Testing Docker image...'
-                sh 'docker image inspect aws-ec2-web-app'
+                sh 'docker rm -f aws-ec2-web-container 2>/dev/null || true'
+                sh 'docker run -d --name aws-ec2-web-container -p 8082:80 aws-ec2-web-app'
             }
         }
 
-        stage('Deploy') {
+        stage('Verify') {
             steps {
-                echo 'Deploying application...'
-
-                sh '''
-                sudo docker stop aws-ec2-web-container 2>/dev/null || true
-                sudo docker rm aws-ec2-web-container 2>/dev/null || true
-
-                sudo docker run -d \
-                  --name aws-ec2-web-container \
-                  -p 8082:80 \
-                  aws-ec2-web-app
-                '''
+                sh 'docker ps'
+                sh 'curl http://localhost:8082'
             }
-        }
-    }
-
-    post {
-        success {
-            echo 'CI/CD Pipeline completed successfully!'
-        }
-
-        failure {
-            echo 'CI/CD Pipeline failed.'
         }
     }
 }
